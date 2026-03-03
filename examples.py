@@ -44,7 +44,22 @@ def build_default_registry() -> SkillRegistry:
 
 def main() -> None:
     registry = build_default_registry()
-    executor = SkillExecutor(registry)
+    # 简单日志中间件示例
+    def log_pre(name: str, request: SkillRequest) -> None:
+        print(f"[pre]  即将执行 skill={name}, payload={request.payload}, metadata={request.metadata}")
+
+    def log_post(name: str, request: SkillRequest, result: SkillResult) -> None:
+        print(f"[post] 已执行 skill={name}, success={result.success}, data={result.data}, error={result.error}")
+
+    def log_exception(name: str, request: SkillRequest, exc: BaseException) -> None:
+        print(f"[error] 执行 skill={name} 时抛出异常: {exc!r}")
+
+    executor = SkillExecutor(
+        registry,
+        pre_hooks=[log_pre],
+        post_hooks=[log_post],
+        exception_hooks=[log_exception],
+    )
 
     result = executor.execute("sum", {"a": 1, "b": 2})
     print("success =", result.success)

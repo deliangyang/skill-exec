@@ -1,10 +1,28 @@
 from __future__ import annotations
 
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, List, Optional, Protocol, runtime_checkable
 
 from .registry import SkillRegistry
 from .skill import SkillRequest, SkillResult
+
+
+@runtime_checkable
+class PreHook(Protocol):
+    def __call__(self, name: str, request: SkillRequest) -> None:  # pragma: no cover - 协议接口本身不需要测试
+        ...
+
+
+@runtime_checkable
+class PostHook(Protocol):
+    def __call__(self, name: str, request: SkillRequest, result: SkillResult) -> None:  # pragma: no cover
+        ...
+
+
+@runtime_checkable
+class ExceptionHook(Protocol):
+    def __call__(self, name: str, request: SkillRequest, exc: BaseException) -> None:  # pragma: no cover
+        ...
 
 
 class SkillExecutor:
@@ -15,10 +33,32 @@ class SkillExecutor:
     - 根据名称从注册表中找到 skill
     - 封装输入为 SkillRequest
     - 捕获异常并统一转换为 SkillResult
+    - 执行可选的前置 / 后置 / 异常钩子（中间件）
     """
 
-    def __init__(self, registry: SkillRegistry) -> None:
+    def __init__(
+        self,
+        registry: SkillRegistry,
+        pre_hooks: Optional[Iterable[PreHook]] = None,
+        post_hooks: Optional[Iterable[PostHook]] = None,
+        exception_hooks: Optional[Iterable[ExceptionHook]] = None,
+    ) -> None:
         self._registry = registry
+        self._pre_hooks: List[PreHook] = list(pre_hooks or [])
+        self._post_hooks: List[PostHook] = list(post_hooks or [])
+        self._exception_hooks: List[ExceptionHook] = list(exception_hooks or [])
+
+    @property
+    def pre_hooks(self) -> List[PreHook]:
+        return self._pre_hooks
+
+    @property
+    def post_hooks(self) -> List[PostHook]:
+        return self._post_hooks
+
+    @property
+    def exception_hooks(self) -> List[ExceptionHook]:
+        return self._exception_hooks
 
     def execute(
         self,
@@ -29,9 +69,15 @@ class SkillExecutor:
         skill = self._registry.require(name)
         request = SkillRequest(payload=payload, metadata=metadata or {})
 
+        for hook in self._pre_hooks:
+            hook(name, request)
+
         try:
             result = skill.execute(request)
         except Exception as exc:  # noqa: BLE001
+            for hook in self._exception_hooks:
+                hook(name, request, exc)
+
             # 这里统一兜底异常，避免异常向上冒泡
             tb = traceback.format_exc()
             return SkillResult(
@@ -42,9 +88,14 @@ class SkillExecutor:
 
         # 如果 skill 自己没有返回 SkillResult，则做一次兜底封装
         if not isinstance(result, SkillResult):
-            return SkillResult(success=True, data=result, error=None)
+            wrapped = SkillResult(success=True, data=result, error=None)
+        else:
+            wrapped = result
 
-        return result
+        for hook in self._post_hooks:
+            hook(name, request, wrapped)
+
+        return wrapped
 
 
 def execute_skill(
