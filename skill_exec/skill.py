@@ -26,11 +26,13 @@ class SkillResult:
     - success: 是否成功
     - data: 成功时返回的数据
     - error: 失败时的错误描述
+    - code: 业务状态码（可选，默认为 "OK"）
     """
 
     success: bool
     data: Optional[Any] = None
     error: Optional[str] = None
+    code: str = "OK"
 
 
 class Skill(ABC):
@@ -55,4 +57,25 @@ class Skill(ABC):
 
     def __repr__(self) -> str:
         return f"<Skill name={self.name!r}>"
+
+
+class SkillError(Exception):
+    """
+    skill 运行期错误基类。
+
+    所有希望被执行器特殊处理的异常都可以继承自该类。
+    """
+
+
+class SkillValidationError(SkillError):
+    """
+    表示请求参数 / 前置条件校验失败。
+    """
+
+
+class SkillExecutionError(SkillError):
+    """
+    表示业务逻辑执行失败（非参数校验类问题）。
+    """
+
 

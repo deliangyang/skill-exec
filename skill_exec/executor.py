@@ -4,7 +4,13 @@ import traceback
 from typing import Any, Dict, Iterable, List, Optional, Protocol, runtime_checkable
 
 from .registry import SkillRegistry
-from .skill import SkillRequest, SkillResult
+from .skill import (
+    SkillError,
+    SkillExecutionError,
+    SkillRequest,
+    SkillResult,
+    SkillValidationError,
+)
 
 
 @runtime_checkable
@@ -79,16 +85,26 @@ class SkillExecutor:
                 hook(name, request, exc)
 
             # 这里统一兜底异常，避免异常向上冒泡
+            if isinstance(exc, SkillValidationError):
+                code = "VALIDATION_ERROR"
+            elif isinstance(exc, SkillExecutionError):
+                code = "EXECUTION_ERROR"
+            elif isinstance(exc, SkillError):
+                code = "SKILL_ERROR"
+            else:
+                code = "UNEXPECTED_ERROR"
+
             tb = traceback.format_exc()
             return SkillResult(
                 success=False,
                 data=None,
                 error=f"{exc!r}\n{tb}",
+                code=code,
             )
 
         # 如果 skill 自己没有返回 SkillResult，则做一次兜底封装
         if not isinstance(result, SkillResult):
-            wrapped = SkillResult(success=True, data=result, error=None)
+            wrapped = SkillResult(success=True, data=result, error=None, code="OK")
         else:
             wrapped = result
 

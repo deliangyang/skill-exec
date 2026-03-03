@@ -8,6 +8,7 @@ from skill_exec import (
     SkillRegistry,
     SkillRequest,
     SkillResult,
+    SkillValidationError,
 )
 
 
@@ -30,8 +31,9 @@ class SumSkill(Skill):
         try:
             a = float(payload.get("a", 0))
             b = float(payload.get("b", 0))
-        except (TypeError, ValueError):
-            return SkillResult(success=False, error="参数 a / b 应该是数字或可转换为数字的字符串")
+        except (TypeError, ValueError) as exc:
+            # 抛出校验异常，由执行器统一转换为 SkillResult
+            raise SkillValidationError("参数 a / b 应该是数字或可转换为数字的字符串") from exc
 
         return SkillResult(success=True, data={"result": a + b})
 
