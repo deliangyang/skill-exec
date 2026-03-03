@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict
 
 from skill_exec import (
+    SequentialWorkflowSkill,
     Skill,
     SkillExecutor,
     SkillRegistry,
@@ -38,9 +40,39 @@ class SumSkill(Skill):
         return SkillResult(success=True, data={"result": a + b})
 
 
+class WaitSkill(Skill):
+    """
+    一个异步示例 skill：等待一段时间再返回。
+
+    payload 结构示例：
+    {
+        "delay": 0.5,
+    }
+    """
+
+    def __init__(self) -> None:
+        super().__init__(name="wait", description="异步等待一段时间")
+
+    async def execute(self, request: SkillRequest) -> SkillResult:
+        payload: Dict[str, Any] = request.payload
+        delay = float(payload.get("delay", 0.5))
+        await asyncio.sleep(delay)
+        return SkillResult(success=True, data={"slept": delay})
+
+
 def build_default_registry() -> SkillRegistry:
     registry = SkillRegistry()
     registry.register(SumSkill())
+    registry.register(WaitSkill())
+    # 一个简单的工作流：先 sum 再 wait
+    registry.register(
+        SequentialWorkflowSkill(
+            name="sum_then_wait",
+            steps=["sum", "wait"],
+            registry=registry,
+            description="先对 a + b 求和，再等待一段时间",
+        )
+    )
     return registry
 
 
@@ -63,10 +95,26 @@ def main() -> None:
         exception_hooks=[log_exception],
     )
 
+    print("=== 执行 sum ===")
     result = executor.execute("sum", {"a": 1, "b": 2})
     print("success =", result.success)
+    print("code    =", result.code)
     print("data    =", result.data)
     print("error   =", result.error)
+
+    print("\n=== 执行异步 wait ===")
+    result2 = executor.execute("wait", {"delay": 0.1})
+    print("success =", result2.success)
+    print("code    =", result2.code)
+    print("data    =", result2.data)
+    print("error   =", result2.error)
+
+    print("\n=== 执行工作流 sum_then_wait ===")
+    result3 = executor.execute("sum_then_wait", {"a": 1, "b": 2, "delay": 0.1})
+    print("success =", result3.success)
+    print("code    =", result3.code)
+    print("data    =", result3.data)
+    print("error   =", result3.error)
 
 
 if __name__ == "__main__":

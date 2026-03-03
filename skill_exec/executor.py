@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 import traceback
 from typing import Any, Dict, Iterable, List, Optional, Protocol, runtime_checkable
 
@@ -79,7 +81,12 @@ class SkillExecutor:
             hook(name, request)
 
         try:
-            result = skill.execute(request)
+            maybe_result = skill.execute(request)
+            # 支持 skill.execute 返回协程（异步 skill）
+            if inspect.isawaitable(maybe_result):
+                result = asyncio.run(maybe_result)
+            else:
+                result = maybe_result
         except Exception as exc:  # noqa: BLE001
             for hook in self._exception_hooks:
                 hook(name, request, exc)

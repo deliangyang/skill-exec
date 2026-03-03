@@ -14,6 +14,7 @@ from .skill import (
 )
 from .registry import SkillRegistry
 from .executor import SkillExecutor, execute_skill
+from .workflow import SequentialWorkflowSkill
 
 __all__ = [
     "Skill",
@@ -24,6 +25,7 @@ __all__ = [
     "SkillResult",
     "SkillRegistry",
     "SkillExecutor",
+    "SequentialWorkflowSkill",
     "execute_skill",
 ]
 
