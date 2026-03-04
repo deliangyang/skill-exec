@@ -1,2 +1,5 @@
-# 当前示例工程仅使用 Python 标准库，无额外第三方依赖。
+# 运行基础示例（examples.py / orchestrator.py / llm_agent.py）仅需 Python 标准库。
+# 如需运行与真实 LLM / 编排框架的集成示例，请安装以下依赖：
+openai
+prefect
 

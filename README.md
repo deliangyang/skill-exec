@@ -54,15 +54,37 @@
 
 ## 示例
 
-见 `examples.py`，内置了多个示例：
+见下列文件中的示例：
 
-- `SumSkill`: 对两个数字求和
-- `WaitSkill`: 使用 `asyncio.sleep` 的异步 skill
-- `SequentialWorkflowSkill("sum_then_wait", ["sum", "wait"], ...)`: 简单顺序工作流
+- `examples.py`:
+  - `SumSkill`: 对两个数字求和
+  - `WaitSkill`: 使用 `asyncio.sleep` 的异步 skill
+  - `SequentialWorkflowSkill("sum_then_wait", ["sum", "wait"], ...)`: 简单顺序工作流
+- `llm_agent.py`:
+  - 演示如何把 skill 暴露为「工具」，并由（模拟的）LLM 选择调用哪个 skill 以及入参
+- `orchestrator.py`:
+  - 演示一个极简自研任务编排器如何基于 `SkillExecutor` 串联多个 skill
+- `llm_agent_openai.py`:
+  - 演示如何使用 OpenAI 官方 SDK 的 tools（function calling）能力，将 skill 作为工具暴露给真实 LLM
+- `orchestrator_prefect.py`:
+  - 演示如何在 Prefect flow 中，以 DAG 方式编排多个 skill
 
 运行示例：
 
 ```bash
+# 基础示例（同步 / 异步 skill + 内置工作流）
 python examples.py
+
+# 模拟 LLM 工具调用
+python llm_agent.py
+
+# 极简自研任务编排示例
+python orchestrator.py
+
+# OpenAI LLM function calling 集成示例（需要 OPENAI_API_KEY）
+python llm_agent_openai.py
+
+# Prefect 任务编排集成示例
+python orchestrator_prefect.py
 ```
 
